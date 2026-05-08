@@ -28,3 +28,13 @@ CREATE INDEX IF NOT EXISTS idx_query_log_hash_warehouse
 
 CREATE INDEX IF NOT EXISTS idx_query_log_executed_at
     ON query_log (executed_at);
+
+CREATE TABLE IF NOT EXISTS query_performance_history (
+    query_hash      TEXT        NOT NULL,
+    warehouse_size  TEXT        NOT NULL,
+    avg_latency_s   FLOAT       NOT NULL DEFAULT 0.0,
+    avg_cost        FLOAT       NOT NULL DEFAULT 0.0,
+    sample_count    INTEGER     NOT NULL DEFAULT 0,
+    last_updated    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (query_hash, warehouse_size)
+);
