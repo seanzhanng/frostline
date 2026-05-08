@@ -23,3 +23,21 @@ class SnowflakeConfig:
             database=os.environ["SNOWFLAKE_DATABASE"],
             schema=os.environ["SNOWFLAKE_SCHEMA"]
         )
+
+@dataclass(frozen=True)
+class PostgresConfig:
+    host: str
+    port: int
+    user: str
+    password: str
+    database: str
+
+    @classmethod
+    def from_env(cls):
+        return cls(
+            host=os.environ.get("POSTGRES_HOST", "localhost"),
+            port=int(os.environ.get("POSTGRES_PORT", "5432")),
+            user=os.environ["POSTGRES_USER"],
+            password=os.environ["POSTGRES_PASSWORD"],
+            database=os.environ["POSTGRES_DB"],
+        )
