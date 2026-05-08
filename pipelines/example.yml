@@ -1,0 +1,30 @@
+steps:
+  - id: city_counts
+    sql: >
+      SELECT DATA:city::STRING AS city, COUNT(*) AS biz_count
+      FROM FROSTLINE.RAW.BUSINESS
+      GROUP BY DATA:city::STRING
+      ORDER BY biz_count DESC
+      LIMIT 20
+
+  - id: top_reviewed
+    sql: >
+      SELECT b.DATA:name::STRING AS name, b.DATA:city::STRING AS city, COUNT(*) AS review_count
+      FROM FROSTLINE.RAW.REVIEW r
+      JOIN FROSTLINE.RAW.BUSINESS b
+        ON r.DATA:business_id::STRING = b.DATA:business_id::STRING
+      GROUP BY b.DATA:name::STRING, b.DATA:city::STRING
+      ORDER BY review_count DESC
+      LIMIT 20
+
+  - id: avg_stars_by_city
+    sql: >
+      SELECT b.DATA:city::STRING AS city, ROUND(AVG(r.DATA:stars::FLOAT), 2) AS avg_stars, COUNT(*) AS review_count
+      FROM FROSTLINE.RAW.REVIEW r
+      JOIN FROSTLINE.RAW.BUSINESS b
+        ON r.DATA:business_id::STRING = b.DATA:business_id::STRING
+      GROUP BY b.DATA:city::STRING
+      HAVING COUNT(*) > 1000
+      ORDER BY avg_stars DESC
+    depends_on:
+      - city_counts
