@@ -1,4 +1,4 @@
-from frostline.pipeline.dag import DAG
+from frostline.orchestrator.dag import DAG
 from frostline.executor import execute_routed_query, ExecutionResult
 
 def run_pipeline(dag: DAG, dry_run: bool = False, warm: bool = True) -> list[ExecutionResult]:

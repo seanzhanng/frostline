@@ -1,11 +1,11 @@
 import click
 import yaml
 from frostline.executor import execute_routed_query
-from frostline.pipeline.dag import DAG, TaskNode
-from frostline.pipeline.runner import run_pipeline
+from frostline.orchestrator.dag import DAG, TaskNode
+from frostline.orchestrator.runner import run_pipeline
 from frostline.config import SnowflakeConfig
 from frostline.connectors.snowflake import get_connection as sf_connect
-from frostline.pipeline.tasks import (
+from frostline.orchestrator.tasks import (
     create_task, create_stream_task, resume_task,
     suspend_task, drop_task, list_tasks
 )
