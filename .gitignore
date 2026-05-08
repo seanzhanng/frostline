@@ -5,3 +5,4 @@ venv/
 data/
 .vscode/
 .DS_Store
+*.egg-info/

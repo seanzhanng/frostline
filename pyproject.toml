@@ -1,0 +1,23 @@
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frostline"
+version = "0.1.0"
+description = "a cost-aware snowflake query router"
+requires-python = ">=3.10"
+dependencies = [
+    "snowflake-connector-python==4.4.0",
+    "python-dotenv==1.2.2",
+    "psycopg2-binary==2.9.12",
+    "click==8.3.3",
+    "pyyaml==6.0.3",
+]
+
+[project.scripts]
+frostline = "frostline.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["frostline*"]
