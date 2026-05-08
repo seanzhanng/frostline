@@ -6,8 +6,11 @@ from frostline.config import SnowflakeConfig, PostgresConfig
 from frostline.analyzer.query import analyze_query, QueryProfile
 from frostline.router.warehouse import recommend_warehouse, WarehouseRecommendation
 from frostline.router.cost_estimator import estimate_cost, CostEstimate
+from frostline.router.feedback import FeedbackStore
 from frostline.connectors.snowflake import get_connection as sf_connect, execute_query as sf_execute
 from frostline.connectors.postgres import get_connection as pg_connect, execute_query as pg_execute
+
+feedback_store = FeedbackStore()
 
 @dataclass(frozen=True)
 class ExecutionResult:
@@ -23,7 +26,9 @@ class ExecutionResult:
 def execute_routed_query(sql: str, dry_run: bool = False, warm: bool = True) -> ExecutionResult:
     profile = analyze_query(sql)
     rec = recommend_warehouse(profile)
-    est = estimate_cost(profile, rec, warm=warm)
+    query_hash = hashlib.md5(sql.encode()).hexdigest()
+    feedback = feedback_store.lookup(query_hash, rec.size.value)
+    est = estimate_cost(profile, rec, warm=warm, feedback=feedback)
 
     if dry_run:
         return ExecutionResult(
@@ -39,7 +44,6 @@ def execute_routed_query(sql: str, dry_run: bool = False, warm: bool = True) -> 
 
     sf_cfg = SnowflakeConfig.from_env()
     pg_cfg = PostgresConfig.from_env()
-    query_hash = hashlib.md5(sql.encode()).hexdigest()
 
     status = "success"
     error_message = None
@@ -50,11 +54,9 @@ def execute_routed_query(sql: str, dry_run: bool = False, warm: bool = True) -> 
     try:
         conn = sf_connect(sf_cfg)
         sf_execute(conn, f"ALTER WAREHOUSE {rec.name} SET WAREHOUSE_SIZE = '{rec.size.value}'")
-
         start = time.perf_counter()
         results = sf_execute(conn, sql)
         elapsed = time.perf_counter() - start
-
         latency_ms = round(elapsed * 1000, 2)
         rows_returned = len(results) if results else 0
         actual_credits = round((rec.credits_per_hour / 3600) * elapsed, 6)
@@ -79,6 +81,17 @@ def execute_routed_query(sql: str, dry_run: bool = False, warm: bool = True) -> 
         pg_conn.close()
     except Exception:
         pass
+
+    if status == "success":
+        try:
+            feedback_store.update(
+                query_hash=query_hash,
+                warehouse_size=rec.size.value,
+                actual_latency_s=latency_ms / 1000,
+                actual_cost=actual_credits,
+            )
+        except Exception:
+            pass
 
     return ExecutionResult(
         profile=profile,
