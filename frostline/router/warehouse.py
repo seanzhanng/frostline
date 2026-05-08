@@ -29,8 +29,27 @@ SIZE_MAP = {
     Complexity.HEAVY: WarehouseSize.LARGE,
 }
 
-def recommend_warehouse(profile: QueryProfile) -> WarehouseRecommendation:
+SIZE_ORDER = [WarehouseSize.XSMALL, WarehouseSize.SMALL,
+              WarehouseSize.MEDIUM, WarehouseSize.LARGE]
+
+DOWNSIZE_LATENCY_THRESHOLD = 3.0
+DOWNSIZE_MIN_SAMPLES = 5
+
+
+def _one_size_down(size: WarehouseSize):
+    idx = SIZE_ORDER.index(size)
+    return SIZE_ORDER[idx - 1] if idx > 0 else None
+
+def recommend_warehouse(profile: QueryProfile, feedback=None) -> WarehouseRecommendation:
     size = SIZE_MAP[profile.complexity]
+    downsized = False
+
+    if feedback and feedback.sample_count >= DOWNSIZE_MIN_SAMPLES:
+        if feedback.avg_latency_s < DOWNSIZE_LATENCY_THRESHOLD:
+            smaller = _one_size_down(size)
+            if smaller is not None:
+                size = smaller
+                downsized = True
 
     parts = [profile.complexity.value.upper()]
     if profile.join_count:
@@ -40,6 +59,8 @@ def recommend_warehouse(profile: QueryProfile) -> WarehouseRecommendation:
     if profile.has_subquery:
         parts.append("subquery")
     parts.append(f"{profile.table_count} table(s)")
+    if downsized:
+        parts.append("downsized via feedback")
 
     return WarehouseRecommendation(
         size=size,

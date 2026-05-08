@@ -25,10 +25,16 @@ class ExecutionResult:
 
 def execute_routed_query(sql: str, dry_run: bool = False, warm: bool = True) -> ExecutionResult:
     profile = analyze_query(sql)
-    rec = recommend_warehouse(profile)
     query_hash = hashlib.md5(sql.encode()).hexdigest()
-    feedback = feedback_store.lookup(query_hash, rec.size.value)
-    est = estimate_cost(profile, rec, warm=warm, feedback=feedback)
+
+    from frostline.router.warehouse import SIZE_MAP
+    default_size = SIZE_MAP[profile.complexity]
+    feedback = feedback_store.lookup(query_hash, default_size.value)
+    rec = recommend_warehouse(profile, feedback=feedback)
+    cost_feedback = feedback
+    if rec.size != default_size:
+        cost_feedback = feedback_store.lookup(query_hash, rec.size.value)
+    est = estimate_cost(profile, rec, warm=warm, feedback=cost_feedback)
 
     if dry_run:
         return ExecutionResult(
